@@ -23,13 +23,40 @@ export function Chat() {
     connectionStatus,
     typingStatus,
     setTypingStatus,
-    clearUnread
+    clearUnread,
+    setCallStatus,
+    setActiveCall,
+    mediaConnection,
+    setMediaConnection,
+    setLocalStream,
+    setRemoteStream,
   } = useChatStore();
   
   const chatMessages = messages.get(activeChat || "") || [];
   const connection = activeChat ? connections.get(activeChat) : null;
   const isDisconnected = activeChat ? connectionStatus.get(activeChat) === 'disconnected' : false;
   const isTyping = activeChat ? typingStatus.get(activeChat) : false;
+
+  useEffect(() => {
+    if (isDisconnected && mediaConnection) {
+      // End call if connection is lost
+      mediaConnection.close();
+      if (activeChat) {
+        setCallStatus(activeChat, 'ended');
+        addMessage(activeChat, {
+          id: crypto.randomUUID(),
+          content: "Call ended due to connection loss",
+          sender: "system",
+          timestamp: Date.now(),
+          type: "call_ended"
+        });
+      }
+      setActiveCall(null);
+      setMediaConnection(null);
+      setLocalStream(null);
+      setRemoteStream(null);
+    }
+  }, [isDisconnected, mediaConnection, activeChat]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -64,6 +91,7 @@ export function Chat() {
       content: message.trim(),
       sender: username,
       timestamp: Date.now(),
+      type: "text"
     };
 
     connection.connection.send(newMessage);
@@ -97,52 +125,58 @@ export function Chat() {
   return (
     <TooltipProvider>
       <div className="flex flex-col h-full bg-[#0b141a]">
-        <ChatHeader 
-          peer={activePeer}
-          isTyping={isTyping}
-          isDisconnected={isDisconnected}
-          onBack={() => setActiveChat(null)}
-        />
+        <div className="fixed top-0 left-0 right-0 z-10">
+          <ChatHeader 
+            peer={activePeer}
+            isTyping={isTyping}
+            isDisconnected={isDisconnected}
+            onBack={() => setActiveChat(null)}
+          />
+          
+          {isDisconnected && (
+            <Alert variant="destructive" className="mx-4 mt-4 bg-red-900/20 border-red-900/50 text-red-400">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>
+                Connection lost. Messages cannot be sent until reconnected.
+              </AlertDescription>
+            </Alert>
+          )}
+        </div>
         
-        {isDisconnected && (
-          <Alert variant="destructive" className="mx-4 mt-4 bg-red-900/20 border-red-900/50 text-red-400">
-            <AlertCircle className="h-4 w-4" />
-            <AlertDescription>
-              Connection lost. Messages cannot be sent until reconnected.
-            </AlertDescription>
-          </Alert>
-        )}
+        <div className="flex-1 overflow-hidden pt-16 pb-16">
+          <ScrollArea className="h-full bg-[#0b141a]">
+            <div className="space-y-1 py-4">
+              {chatMessages.map((msg, index) => {
+                const isFirstInGroup = index === 0 || chatMessages[index - 1].sender !== msg.sender;
+                const isLastInGroup = index === chatMessages.length - 1 || chatMessages[index + 1].sender !== msg.sender;
+                
+                return (
+                  <MessageBubble
+                    key={msg.id}
+                    message={msg}
+                    isFirstInGroup={isFirstInGroup}
+                    isLastInGroup={isLastInGroup}
+                    showAvatar={isLastInGroup}
+                    isCurrentUser={msg.sender === username}
+                  />
+                );
+              })}
+              <div ref={messagesEndRef} />
+            </div>
+          </ScrollArea>
+        </div>
         
-        <ScrollArea className="flex-1 bg-[#0b141a]">
-          <div className="space-y-1 py-4">
-            {chatMessages.map((msg, index) => {
-              const isFirstInGroup = index === 0 || chatMessages[index - 1].sender !== msg.sender;
-              const isLastInGroup = index === chatMessages.length - 1 || chatMessages[index + 1].sender !== msg.sender;
-              
-              return (
-                <MessageBubble
-                  key={msg.id}
-                  message={msg}
-                  isFirstInGroup={isFirstInGroup}
-                  isLastInGroup={isLastInGroup}
-                  showAvatar={isLastInGroup}
-                  isCurrentUser={msg.sender === username}
-                />
-              );
-            })}
-            <div ref={messagesEndRef} />
-          </div>
-        </ScrollArea>
-        
-        <ChatInput
-          message={message}
-          onChange={(value) => {
-            setMessage(value);
-            handleTyping();
-          }}
-          onSend={handleSendMessage}
-          isDisabled={isDisconnected}
-        />
+        <div className="fixed bottom-0 left-0 right-0 bg-[#202c33] border-t border-[#2a373f]">
+          <ChatInput
+            message={message}
+            onChange={(value) => {
+              setMessage(value);
+              handleTyping();
+            }}
+            onSend={handleSendMessage}
+            isDisabled={isDisconnected}
+          />
+        </div>
       </div>
     </TooltipProvider>
   );

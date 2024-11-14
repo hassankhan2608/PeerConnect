@@ -4,7 +4,6 @@ import { Send, Paperclip, Mic, Smile } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 
-
 interface ChatInputProps {
   message: string;
   onChange: (value: string) => void;
@@ -14,7 +13,7 @@ interface ChatInputProps {
 
 export function ChatInput({ message, onChange, onSend, isDisabled }: ChatInputProps) {
   return (
-    <div className="border-t border-[#2a373f] bg-[#202c33] p-4">
+    <div className="p-2">
       <form
         onSubmit={(e) => {
           e.preventDefault();

@@ -1,6 +1,7 @@
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { Message } from "@/lib/store";
+import { Phone, PhoneOff } from "lucide-react";
 
 interface MessageBubbleProps {
   message: Message;
@@ -10,12 +11,41 @@ interface MessageBubbleProps {
   isCurrentUser: boolean;
 }
 
+function formatDuration(seconds: number): string {
+  const hours = Math.floor(seconds / 3600);
+  const minutes = Math.floor((seconds % 3600) / 60);
+  const remainingSeconds = seconds % 60;
+
+  if (hours > 0) {
+    return `${hours}:${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
+  }
+  return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
+}
+
 export function MessageBubble({
   message,
   isFirstInGroup,
   isLastInGroup,
   isCurrentUser
 }: MessageBubbleProps) {
+  if (message.type === 'system' || message.type === 'call_started' || message.type === 'call_ended') {
+    return (
+      <div className="flex justify-center px-4 py-2">
+        <div className="flex items-center gap-2 bg-[#202c33] px-3 py-1.5 rounded-lg text-sm text-[#8696a0]">
+          {message.type === 'call_started' && <Phone className="w-4 h-4" />}
+          {message.type === 'call_ended' && <PhoneOff className="w-4 h-4" />}
+          <span>
+            {message.content}
+            {message.duration && ` • ${formatDuration(message.duration)}`}
+          </span>
+          <span className="text-xs">
+            {format(message.timestamp, "HH:mm")}
+          </span>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className={cn(
       "flex w-full px-4 md:px-8 lg:px-16 xl:px-24 2xl:px-32",
