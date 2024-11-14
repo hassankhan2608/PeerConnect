@@ -1,5 +1,4 @@
 import { useEffect, useRef } from 'react';
-import { cn } from '@/lib/utils';
 
 interface AudioVisualizerProps {
   stream: MediaStream | null;
@@ -19,7 +18,7 @@ export function AudioVisualizer({ stream, className }: AudioVisualizerProps) {
     const analyser = audioContext.createAnalyser();
     analyserRef.current = analyser;
 
-    analyser.fftSize = 32; // Reduced for minimal bars
+    analyser.fftSize = 256;
     source.connect(analyser);
 
     const bufferLength = analyser.frequencyBinCount;
@@ -36,23 +35,18 @@ export function AudioVisualizer({ stream, className }: AudioVisualizerProps) {
       analyser.getByteFrequencyData(dataArray);
       
       ctx.clearRect(0, 0, WIDTH, HEIGHT);
+      ctx.fillStyle = '#00a884';
       
-      // Calculate average volume for smooth animation
-      const average = dataArray.reduce((a, b) => a + b) / bufferLength;
-      const normalizedHeight = (average / 255) * HEIGHT;
+      const barWidth = (WIDTH / bufferLength) * 2.5;
+      let barHeight;
+      let x = 0;
       
-      // Draw a single, smooth bar
-      const gradient = ctx.createLinearGradient(0, HEIGHT, 0, HEIGHT - normalizedHeight);
-      gradient.addColorStop(0, '#00a884');
-      gradient.addColorStop(1, '#00d1a1');
-      
-      ctx.fillStyle = gradient;
-      ctx.beginPath();
-      ctx.moveTo(0, HEIGHT);
-      ctx.lineTo(0, HEIGHT - normalizedHeight);
-      ctx.quadraticCurveTo(WIDTH/2, HEIGHT - normalizedHeight - 5, WIDTH, HEIGHT - normalizedHeight);
-      ctx.lineTo(WIDTH, HEIGHT);
-      ctx.fill();
+      for (let i = 0; i < bufferLength; i++) {
+        barHeight = (dataArray[i] / 255) * HEIGHT;
+        
+        ctx.fillRect(x, HEIGHT - barHeight, barWidth, barHeight);
+        x += barWidth + 1;
+      }
       
       animationRef.current = requestAnimationFrame(draw);
     };
@@ -70,9 +64,9 @@ export function AudioVisualizer({ stream, className }: AudioVisualizerProps) {
   return (
     <canvas 
       ref={canvasRef} 
-      width={100} 
-      height={24} 
-      className={cn("rounded-full", className)}
+      width={200} 
+      height={40} 
+      className={className}
     />
   );
 }

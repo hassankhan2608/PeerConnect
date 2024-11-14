@@ -16,8 +16,6 @@ interface ChatState {
   mediaConnection: MediaConnection | null;
   localStream: MediaStream | null;
   remoteStream: MediaStream | null;
-  callStartTime: Map<string, number>;
-  callEndTime: Map<string, number>;
   setUsername: (username: string) => void;
   setPeerId: (peerId: string) => void;
   setPeer: (peer: Peer) => void;
@@ -34,8 +32,6 @@ interface ChatState {
   setMediaConnection: (connection: MediaConnection | null) => void;
   setLocalStream: (stream: MediaStream | null) => void;
   setRemoteStream: (stream: MediaStream | null) => void;
-  setCallStartTime: (peerId: string, time: number) => void;
-  setCallEndTime: (peerId: string, time: number) => void;
 }
 
 export interface ConnectionInfo {
@@ -48,8 +44,6 @@ export interface Message {
   content: string;
   sender: string;
   timestamp: number;
-  type?: 'text' | 'call_started' | 'call_ended' | 'system';
-  duration?: number;
 }
 
 export type ConnectionStatus = 'connected' | 'disconnected';
@@ -70,8 +64,6 @@ export const useChatStore = create<ChatState>((set) => ({
   mediaConnection: null,
   localStream: null,
   remoteStream: null,
-  callStartTime: new Map(),
-  callEndTime: new Map(),
   setUsername: (username) => set({ username }),
   setPeerId: (peerId) => set({ peerId }),
   setPeer: (peer) => set({ peer }),
@@ -126,12 +118,4 @@ export const useChatStore = create<ChatState>((set) => ({
   setMediaConnection: (connection) => set({ mediaConnection: connection }),
   setLocalStream: (stream) => set({ localStream: stream }),
   setRemoteStream: (stream) => set({ remoteStream: stream }),
-  setCallStartTime: (peerId, time) =>
-    set((state) => ({
-      callStartTime: new Map(state.callStartTime).set(peerId, time),
-    })),
-  setCallEndTime: (peerId, time) =>
-    set((state) => ({
-      callEndTime: new Map(state.callEndTime).set(peerId, time),
-    })),
 }));
