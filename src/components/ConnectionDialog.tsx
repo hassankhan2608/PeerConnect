@@ -23,14 +23,21 @@ import {
 export function ConnectionDialog() {
   const [showQR, setShowQR] = useState(false);
   const [peerIdToConnect, setPeerIdToConnect] = useState("");
+  const [isConnecting, setIsConnecting] = useState(false);
   const { peerId, peer, username, addConnection } = useChatStore();
   const { toast } = useToast();
 
-  const shareLink = `${window.location.origin}?connect=${encodeURIComponent(JSON.stringify({ peerId, username }))}`;
+  const shareLink = `${window.location.origin}${window.location.pathname}?connect=${encodeURIComponent(JSON.stringify({ peerId, username }))}`;
 
-  const handleConnect = () => {
-    if (!peer || !peerIdToConnect) return;
+  const handleConnect = async () => {
+    if (!peer || !peerIdToConnect || isConnecting) return;
     
+    setIsConnecting(true);
+    const toastId = toast({
+      title: "Connecting...",
+      description: "Please wait while we establish the connection",
+    });
+
     try {
       if (peerIdToConnect.includes('?connect=')) {
         const url = new URL(peerIdToConnect);
@@ -39,62 +46,76 @@ export function ConnectionDialog() {
           const { peerId: targetPeerId, username: targetUsername } = JSON.parse(decodeURIComponent(connectParam));
           const conn = peer.connect(targetPeerId);
           
-          conn.on("open", () => {
-            conn.send({ type: "USER_INFO", username });
-            addConnection(targetPeerId, { connection: conn, username: targetUsername });
-            toast({
-              title: "Connected!",
-              description: `Connected to ${targetUsername}`,
+          // Set a connection timeout
+          const timeout = setTimeout(() => {
+            conn.close();
+            throw new Error("Connection timed out");
+          }, 15000);
+
+          await new Promise((resolve, reject) => {
+            conn.on("open", () => {
+              clearTimeout(timeout);
+              conn.send({ type: "USER_INFO", username });
+              addConnection(targetPeerId, { connection: conn, username: targetUsername });
+              toast.dismiss(toastId);
+              toast({
+                title: "Connected!",
+                description: `Connected to ${targetUsername}`,
+              });
+              // Clear the connect param from URL
+              const newUrl = new URL(window.location.href);
+              newUrl.searchParams.delete('connect');
+              window.history.replaceState({}, '', newUrl);
+              resolve(null);
+            });
+
+            conn.on("error", (err) => {
+              clearTimeout(timeout);
+              reject(err);
             });
           });
 
-          conn.on("error", () => {
-            toast({
-              title: "Connection Failed",
-              description: "Failed to connect to peer",
-              variant: "destructive",
-            });
-          });
-
-          conn.on("data", (data: any) => {
-            if (data.type === "USER_INFO") {
-              addConnection(conn.peer, { connection: conn, username: data.username });
-            }
-          });
           return;
         }
       }
       
       const conn = peer.connect(peerIdToConnect);
       
-      conn.on("open", () => {
-        conn.send({ type: "USER_INFO", username });
-        addConnection(peerIdToConnect, { connection: conn, username: "Unknown" });
-        toast({
-          title: "Connected!",
-          description: "Connected successfully",
+      // Set a connection timeout
+      const timeout = setTimeout(() => {
+        conn.close();
+        throw new Error("Connection timed out");
+      }, 15000);
+
+      await new Promise((resolve, reject) => {
+        conn.on("open", () => {
+          clearTimeout(timeout);
+          conn.send({ type: "USER_INFO", username });
+          addConnection(peerIdToConnect, { connection: conn, username: "Unknown" });
+          toast.dismiss(toastId);
+          toast({
+            title: "Connected!",
+            description: "Connected successfully",
+          });
+          resolve(null);
+        });
+
+        conn.on("error", (err) => {
+          clearTimeout(timeout);
+          reject(err);
         });
       });
 
-      conn.on("error", () => {
-        toast({
-          title: "Connection Failed",
-          description: "Failed to connect to peer",
-          variant: "destructive",
-        });
-      });
-
-      conn.on("data", (data: any) => {
-        if (data.type === "USER_INFO") {
-          addConnection(conn.peer, { connection: conn, username: data.username });
-        }
-      });
     } catch (error) {
+      toast.dismiss(toastId);
       toast({
         title: "Connection Failed",
-        description: "Invalid peer ID or share link",
+        description: error instanceof Error ? error.message : "Failed to connect to peer",
         variant: "destructive",
       });
+    } finally {
+      setIsConnecting(false);
+      setPeerIdToConnect("");
     }
   };
 
@@ -162,8 +183,12 @@ export function ConnectionDialog() {
                 onChange={(e) => setPeerIdToConnect(e.target.value)}
                 className="bg-[#2a3942] border-[#2a373f] text-[#e9edef] placeholder:text-[#8696a0] focus-visible:ring-[#00a884] focus-visible:ring-offset-0"
               />
-              <Button onClick={handleConnect} className="w-full bg-[#00a884] hover:bg-[#00a884]/90 text-white">
-                Connect
+              <Button 
+                onClick={handleConnect} 
+                disabled={isConnecting}
+                className="w-full bg-[#00a884] hover:bg-[#00a884]/90 text-white disabled:opacity-50"
+              >
+                {isConnecting ? "Connecting..." : "Connect"}
               </Button>
             </div>
           </TabsContent>
