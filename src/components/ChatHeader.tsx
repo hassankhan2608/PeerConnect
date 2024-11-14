@@ -1,5 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { cn } from "@/lib/utils";
 import { 
   MoreVertical, 
   Phone, 
@@ -14,7 +15,6 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { ConnectionInfo, useChatStore } from "@/lib/store";
-import { useToast } from "@/hooks/use-toast";
 
 interface ChatHeaderProps {
   peer: ConnectionInfo;
@@ -24,7 +24,6 @@ interface ChatHeaderProps {
 }
 
 export function ChatHeader({ peer, isTyping, isDisconnected, onBack }: ChatHeaderProps) {
-  const { toast } = useToast();
   const { 
     peer: peerInstance,
     setCallStatus,
@@ -84,21 +83,11 @@ export function ChatHeader({ peer, isTyping, isDisconnected, onBack }: ChatHeade
           setLocalStream(null);
           setMediaConnection(null);
           setCallStatus(peer.connection.peer, 'ended');
-          toast({
-            title: "Call Ended",
-            description: "No answer from peer",
-            variant: "destructive",
-          });
         }
       }, 30000);
 
     } catch (error) {
       console.error('Microphone access error:', error);
-      toast({
-        title: "Call Failed",
-        description: "Please allow microphone access in your browser settings",
-        variant: "destructive",
-      });
     }
   };
 
@@ -123,7 +112,9 @@ export function ChatHeader({ peer, isTyping, isDisconnected, onBack }: ChatHeade
         </Button>
         
         <Avatar className="h-10 w-10 cursor-pointer">
-          <AvatarFallback className="bg-[#00a884]/10 text-[#00a884]">
+          <AvatarFallback className={cn(
+            isDisconnected ? "bg-[#202c33] text-[#8696a0]" : "bg-[#00a884]/10 text-[#00a884]"
+          )}>
             {peer.username.slice(0, 2).toUpperCase()}
           </AvatarFallback>
         </Avatar>

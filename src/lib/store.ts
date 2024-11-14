@@ -13,6 +13,7 @@ interface ChatState {
   unreadCounts: Map<string, number>;
   callStatus: Map<string, CallStatus>;
   activeCall: string | null;
+  incomingCall: IncomingCall | null;
   mediaConnection: MediaConnection | null;
   localStream: MediaStream | null;
   remoteStream: MediaStream | null;
@@ -29,6 +30,7 @@ interface ChatState {
   clearUnread: (peerId: string) => void;
   setCallStatus: (peerId: string, status: CallStatus) => void;
   setActiveCall: (peerId: string | null) => void;
+  setIncomingCall: (call: IncomingCall | null) => void;
   setMediaConnection: (connection: MediaConnection | null) => void;
   setLocalStream: (stream: MediaStream | null) => void;
   setRemoteStream: (stream: MediaStream | null) => void;
@@ -46,6 +48,11 @@ export interface Message {
   timestamp: number;
 }
 
+export interface IncomingCall {
+  peerId: string;
+  call: MediaConnection;
+}
+
 export type ConnectionStatus = 'connected' | 'disconnected';
 export type CallStatus = 'none' | 'ringing' | 'ongoing' | 'ended';
 
@@ -61,6 +68,7 @@ export const useChatStore = create<ChatState>((set) => ({
   unreadCounts: new Map(),
   callStatus: new Map(),
   activeCall: null,
+  incomingCall: null,
   mediaConnection: null,
   localStream: null,
   remoteStream: null,
@@ -115,6 +123,7 @@ export const useChatStore = create<ChatState>((set) => ({
       callStatus: new Map(state.callStatus).set(peerId, status),
     })),
   setActiveCall: (peerId) => set({ activeCall: peerId }),
+  setIncomingCall: (call) => set({ incomingCall: call }),
   setMediaConnection: (connection) => set({ mediaConnection: connection }),
   setLocalStream: (stream) => set({ localStream: stream }),
   setRemoteStream: (stream) => set({ remoteStream: stream }),

@@ -31,23 +31,23 @@ export function AudioVisualizer({ stream, className }: AudioVisualizerProps) {
 
       const WIDTH = canvas.width;
       const HEIGHT = canvas.height;
-      
+
       analyser.getByteFrequencyData(dataArray);
-      
+
       ctx.clearRect(0, 0, WIDTH, HEIGHT);
       ctx.fillStyle = '#00a884';
-      
+
       const barWidth = (WIDTH / bufferLength) * 2.5;
       let barHeight;
       let x = 0;
-      
+
       for (let i = 0; i < bufferLength; i++) {
         barHeight = (dataArray[i] / 255) * HEIGHT;
-        
+
         ctx.fillRect(x, HEIGHT - barHeight, barWidth, barHeight);
         x += barWidth + 1;
       }
-      
+
       animationRef.current = requestAnimationFrame(draw);
     };
 
@@ -62,11 +62,6 @@ export function AudioVisualizer({ stream, className }: AudioVisualizerProps) {
   }, [stream]);
 
   return (
-    <canvas 
-      ref={canvasRef} 
-      width={200} 
-      height={40} 
-      className={className}
-    />
+    <canvas ref={canvasRef} width={200} height={40} className={className} />
   );
 }

@@ -8,10 +8,8 @@ import { CallDialog } from "./components/CallDialog";
 import { Toaster } from "@/components/ui/toaster";
 import { cn } from "@/lib/utils";
 import { ThemeProvider } from "@/components/theme-provider";
-import { useToast } from "@/hooks/use-toast";
 
 function App() {
-  const { toast } = useToast();
   const { 
     username, 
     setUsername, 
@@ -26,6 +24,7 @@ function App() {
     incrementUnread,
     setCallStatus,
     setActiveCall,
+    setIncomingCall,
     setMediaConnection,
     setLocalStream,
     setRemoteStream,
@@ -101,73 +100,9 @@ function App() {
       setupConnectionHandlers(conn);
     });
 
-    peer.on("call", async (call) => {
-      const caller = useChatStore.getState().connections.get(call.peer);
-      const callerName = caller?.username || "Someone";
-
-      const toastId = toast({
-        title: "Incoming Call",
-        description: `${callerName} is calling you`,
-        duration: 30000,
-        action: (
-          <div className="flex gap-2">
-            <button
-              onClick={async () => {
-                try {
-                  const stream = await navigator.mediaDevices.getUserMedia({
-                    audio: {
-                      echoCancellation: true,
-                      noiseSuppression: true,
-                      autoGainControl: true
-                    }
-                  });
-                  
-                  call.answer(stream);
-                  setLocalStream(stream);
-                  setMediaConnection(call);
-                  setCallStatus(call.peer, 'ongoing');
-                  setActiveCall(call.peer);
-
-                  call.on('stream', (remoteStream) => {
-                    setRemoteStream(remoteStream);
-                  });
-
-                  call.on('close', () => {
-                    stream.getTracks().forEach(track => track.stop());
-                    setLocalStream(null);
-                    setRemoteStream(null);
-                    setMediaConnection(null);
-                    setCallStatus(call.peer, 'ended');
-                    setActiveCall(null);
-                  });
-
-                  toast.dismiss(toastId);
-                } catch (error) {
-                  console.error('Microphone access error:', error);
-                  toast({
-                    title: "Call Failed",
-                    description: "Please allow microphone access in your browser settings",
-                    variant: "destructive",
-                  });
-                }
-              }}
-              className="bg-[#00a884] text-white px-3 py-1 rounded-md hover:bg-[#00a884]/90"
-            >
-              Accept
-            </button>
-            <button
-              onClick={() => {
-                call.close();
-                setCallStatus(call.peer, 'ended');
-                toast.dismiss(toastId);
-              }}
-              className="bg-red-500 text-white px-3 py-1 rounded-md hover:bg-red-600"
-            >
-              Decline
-            </button>
-          </div>
-        ),
-      });
+    peer.on("call", (call) => {
+      setIncomingCall({ peerId: call.peer, call });
+      setCallStatus(call.peer, 'ringing');
     });
 
     peer.on("disconnected", () => {
@@ -219,13 +154,13 @@ function App() {
       <div className="h-screen w-full bg-[#111b21] flex overflow-hidden">
         <div className={cn(
           "h-full transition-all duration-300 ease-in-out flex-shrink-0 border-r border-[#2a373f]",
-          activeChat ? "hidden md:block w-[380px] 2xl:w-[420px]" : "w-full md:w-[380px] 2xl:w-[420px]"
+          activeChat ? "hidden md:block md:w-[380px] 2xl:w-[420px]" : "w-full md:w-[380px] 2xl:w-[420px]"
         )}>
           <Sidebar />
         </div>
         <div className={cn(
           "h-full transition-all duration-300 ease-in-out flex-grow min-w-0",
-          activeChat ? "w-full" : "hidden md:block"
+          activeChat ? "block w-full" : "hidden md:block"
         )}>
           <Chat />
         </div>
