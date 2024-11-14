@@ -35,7 +35,7 @@ export function AudioVisualizer({ stream, className }: AudioVisualizerProps) {
       analyser.getByteFrequencyData(dataArray);
 
       ctx.clearRect(0, 0, WIDTH, HEIGHT);
-      ctx.fillStyle = '#00a884';
+      ctx.fillStyle = '#044cab';
 
       const barWidth = (WIDTH / bufferLength) * 2.5;
       let barHeight;

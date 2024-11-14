@@ -121,26 +121,34 @@ export function ConnectionDialog() {
 
   const content = (
     <Tabs defaultValue="share" className="w-full">
-      <TabsList className="grid w-full grid-cols-2 bg-[#111b21]">
-        <TabsTrigger value="share" className="data-[state=active]:bg-[#2a3942]">Share</TabsTrigger>
-        <TabsTrigger value="connect" className="data-[state=active]:bg-[#2a3942]">Connect</TabsTrigger>
+      <TabsList className="grid w-full grid-cols-2">
+        <TabsTrigger value="share">Share</TabsTrigger>
+        <TabsTrigger value="connect">Connect</TabsTrigger>
       </TabsList>
       <TabsContent value="share" className="space-y-4">
         <div className="space-y-4">
-          <div className="p-4 rounded-lg space-y-2 bg-[#111b21]">
-            <div className="text-sm font-medium text-[#8696a0]">Your Details</div>
-            <div className="text-2xl font-bold text-[#e9edef]">{username}</div>
-            <div className="text-sm text-[#8696a0] font-mono break-all">
+          <div className="p-4 rounded-lg space-y-2 bg-primary/5">
+            <div className="text-sm font-medium text-muted-foreground">Your Details</div>
+            <div className="text-2xl font-bold">{username}</div>
+            <div className="text-sm text-muted-foreground font-mono break-all">
               {peerId}
             </div>
           </div>
           
           <div className="grid gap-2">
-            <Button variant="outline" onClick={copyLink} className="bg-[#2a3942] border-[#2a373f] text-[#e9edef] hover:bg-[#384147]">
+            <Button 
+              variant="outline" 
+              onClick={copyLink}
+              className="bg-primary/10 hover:bg-primary/20 text-primary-800 border-primary/20"
+            >
               <LinkIcon className="w-4 h-4 mr-2" />
               Copy Share Link
             </Button>
-            <Button variant="outline" onClick={() => setShowQR(!showQR)} className="bg-[#2a3942] border-[#2a373f] text-[#e9edef] hover:bg-[#384147]">
+            <Button 
+              variant="outline" 
+              onClick={() => setShowQR(!showQR)}
+              className="bg-primary/10 hover:bg-primary/20 text-primary-800 border-primary/20"
+            >
               <QrCode className="w-4 h-4 mr-2" />
               {showQR ? "Hide QR Code" : "Show QR Code"}
             </Button>
@@ -159,9 +167,11 @@ export function ConnectionDialog() {
             placeholder="Paste share link or enter Peer ID"
             value={peerIdToConnect}
             onChange={(e) => setPeerIdToConnect(e.target.value)}
-            className="bg-[#2a3942] border-[#2a373f] text-[#e9edef] placeholder:text-[#8696a0] focus-visible:ring-[#00a884] focus-visible:ring-offset-0"
           />
-          <Button onClick={handleConnect} className="w-full bg-[#00a884] hover:bg-[#00a884]/90 text-white">
+          <Button 
+            onClick={handleConnect} 
+            className="w-full bg-primary/10 hover:bg-primary/20 text-primary-800 border-primary/20"
+          >
             Connect
           </Button>
         </div>
@@ -173,15 +183,15 @@ export function ConnectionDialog() {
     return (
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogTrigger asChild>
-          <Button className="w-full bg-[#00a884] hover:bg-[#00a884]/90 text-white">
+          <Button className="w-full bg-primary/10 hover:bg-primary/20 text-primary-800 border-primary/20">
             <UserPlus className="w-5 h-5 mr-2" />
             New Chat
           </Button>
         </DialogTrigger>
-        <DialogContent className="sm:max-w-md bg-[#202c33] text-[#e9edef] border-[#2a373f]">
+        <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle className="text-[#e9edef]">Connect with Friends</DialogTitle>
-            <DialogDescription className="text-[#8696a0]">
+            <DialogTitle>Connect with Friends</DialogTitle>
+            <DialogDescription>
               Share your details or connect with others
             </DialogDescription>
           </DialogHeader>
@@ -194,15 +204,15 @@ export function ConnectionDialog() {
   return (
     <Drawer open={open} onOpenChange={setOpen}>
       <DrawerTrigger asChild>
-        <Button className="w-full bg-[#00a884] hover:bg-[#00a884]/90 text-white">
+        <Button className="w-full bg-primary/10 hover:bg-primary/20 text-primary-800 border-primary/20">
           <UserPlus className="w-5 h-5 mr-2" />
           New Chat
         </Button>
       </DrawerTrigger>
-      <DrawerContent className="bg-[#202c33] text-[#e9edef] border-t-[#2a373f]">
+      <DrawerContent>
         <DrawerHeader>
-          <DrawerTitle className="text-[#e9edef]">Connect with Friends</DrawerTitle>
-          <DrawerDescription className="text-[#8696a0]">
+          <DrawerTitle>Connect with Friends</DrawerTitle>
+          <DrawerDescription>
             Share your details or connect with others
           </DrawerDescription>
         </DrawerHeader>

@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { Peer } from "peerjs";
-import { uniqueNamesGenerator, adjectives, colors, animals } from "unique-names-generator";
+import { uniqueNamesGenerator, Config } from "unique-names-generator";
 import { useChatStore } from "./lib/store";
 import { Sidebar } from "./components/Sidebar";
 import { Chat } from "./components/Chat";
@@ -8,6 +8,28 @@ import { CallDialog } from "./components/CallDialog";
 import { Toaster } from "@/components/ui/toaster";
 import { cn } from "@/lib/utils";
 import { ThemeProvider } from "@/components/theme-provider";
+
+// Custom dictionaries for more interesting names
+const heroes = [
+  "Phoenix", "Shadow", "Storm", "Frost", "Nova", "Echo", "Blade", "Spark",
+  "Quantum", "Cipher", "Vector", "Zenith", "Nebula", "Pulse", "Crystal", "Volt",
+  "Atlas", "Omega", "Apex", "Titan", "Luna", "Solar", "Cosmic", "Star"
+];
+
+const mysteriousAdjectives = [
+  "Mystic", "Astral", "Ethereal", "Cosmic", "Phantom", "Enigma", "Shadow",
+  "Crystal", "Celestial", "Quantum", "Nebula", "Void", "Stellar", "Aurora",
+  "Infinity", "Dream", "Echo", "Cyber", "Neo", "Prime", "Ultra", "Meta"
+];
+
+// Config for username generation with max length
+const nameConfig: Config = {
+  dictionaries: [mysteriousAdjectives, heroes],
+  separator: "",
+  style: "capital",
+  length: 2,
+  maxLength: 16 // Slightly longer to accommodate cool names
+};
 
 function App() {
   const { 
@@ -35,12 +57,14 @@ function App() {
     const connectParam = urlParams.get('connect');
     
     if (!username) {
-      const randomName = uniqueNamesGenerator({
-        dictionaries: [adjectives, colors, animals],
-        separator: "",
-        style: "capital",
-        seed: Date.now(),
-      });
+      let randomName;
+      do {
+        randomName = uniqueNamesGenerator({
+          ...nameConfig,
+          seed: Date.now() + Math.random(),
+        });
+      } while (randomName.length > nameConfig.maxLength);
+      
       setUsername(randomName);
     }
 
@@ -142,7 +166,6 @@ function App() {
       }
     });
 
-    // Monitor connection state
     conn.peerConnection.addEventListener('connectionstatechange', () => {
       const state = conn.peerConnection.connectionState;
       updateConnectionStatus(conn.peer, state === 'connected' ? 'connected' : 'disconnected');

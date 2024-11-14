@@ -14,6 +14,7 @@ import { cn } from "@/lib/utils";
 import { AudioVisualizer } from "./AudioVisualizer";
 import { useMediaQuery } from "@/hooks/use-media-query";
 import { Ringtone } from "./Ringtone";
+import { ScrollArea } from "./ui/scroll-area";
 
 export function CallDialog() {
   const localAudioRef = useRef<HTMLAudioElement>(null);
@@ -45,12 +46,18 @@ export function CallDialog() {
   useEffect(() => {
     if (localAudioRef.current && localStream) {
       localAudioRef.current.srcObject = localStream;
+      localAudioRef.current.play().catch(error => {
+        console.error('Local audio playback failed:', error);
+      });
     }
   }, [localStream]);
 
   useEffect(() => {
     if (remoteAudioRef.current && remoteStream) {
       remoteAudioRef.current.srcObject = remoteStream;
+      remoteAudioRef.current.play().catch(error => {
+        console.error('Remote audio playback failed:', error);
+      });
     }
   }, [remoteStream]);
 
@@ -131,109 +138,109 @@ export function CallDialog() {
 
   if (!activeCall && !incomingCall) return null;
 
-  const incomingCallContent = incomingCall && incomingPeer && (
-    <div className="flex flex-col items-center space-y-4 p-4">
-      <Ringtone 
-        play={true} 
-        onEnd={handleCallTimeout}
-      />
-      <div className="w-24 h-24 rounded-full bg-[#00a884]/10 flex items-center justify-center animate-pulse">
-        <span className="text-4xl text-[#00a884]">
-          {incomingPeer.username.slice(0, 2).toUpperCase()}
-        </span>
+  const dialogContent = (
+    <ScrollArea className="max-h-[80vh] overflow-y-auto">
+      <div className="flex flex-col items-center space-y-4 p-4">
+        {incomingCall && incomingPeer ? (
+          <>
+            <Ringtone play={true} onEnd={handleCallTimeout} />
+            <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-full bg-primary/10 flex items-center justify-center animate-pulse">
+              <span className="text-3xl sm:text-4xl text-primary-800">
+                {incomingPeer.username.slice(0, 2).toUpperCase()}
+              </span>
+            </div>
+
+            <div className="text-center space-y-1">
+              <h3 className="text-base sm:text-lg font-semibold truncate max-w-[200px] sm:max-w-[300px]">
+                {incomingPeer.username}
+              </h3>
+              <p className="text-sm text-muted-foreground animate-pulse">
+                Incoming call...
+              </p>
+            </div>
+
+            <div className="flex gap-4">
+              <Button
+                variant="destructive"
+                size="icon"
+                className="h-12 w-12 rounded-full"
+                onClick={handleRejectCall}
+              >
+                <PhoneOff className="h-6 w-6" />
+              </Button>
+              <Button
+                variant="outline"
+                size="icon"
+                className="h-12 w-12 rounded-full bg-primary/10 hover:bg-primary/20 text-primary-800 border-primary/20"
+                onClick={handleAcceptCall}
+              >
+                <Phone className="h-6 w-6" />
+              </Button>
+            </div>
+          </>
+        ) : activePeer && (
+          <>
+            <Ringtone play={currentCallStatus === 'ringing'} onEnd={handleCallTimeout} />
+            <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-full bg-primary/10 flex items-center justify-center">
+              <span className="text-3xl sm:text-4xl text-primary-800">
+                {activePeer.username.slice(0, 2).toUpperCase()}
+              </span>
+            </div>
+
+            <div className="text-center space-y-1">
+              <h3 className="text-base sm:text-lg font-semibold truncate max-w-[200px] sm:max-w-[300px]">
+                {activePeer.username}
+              </h3>
+              <p className="text-sm text-muted-foreground">
+                {currentCallStatus === 'ringing' ? 'Calling...' : 'Connected'}
+              </p>
+            </div>
+
+            {currentCallStatus !== 'ringing' && (
+              <div className="space-y-2 w-full">
+                <div className="flex items-center justify-between px-4">
+                  <span className="text-sm text-muted-foreground">Your audio</span>
+                  <AudioVisualizer 
+                    stream={localStream} 
+                    className="bg-primary/5 rounded"
+                  />
+                </div>
+                
+                <div className="flex items-center justify-between px-4">
+                  <span className="text-sm text-muted-foreground truncate max-w-[100px]">
+                    {activePeer.username}'s audio
+                  </span>
+                  <AudioVisualizer 
+                    stream={remoteStream}
+                    className="bg-primary/5 rounded"
+                  />
+                </div>
+              </div>
+            )}
+
+            <audio ref={localAudioRef} autoPlay muted className="hidden" />
+            <audio ref={remoteAudioRef} autoPlay className="hidden" />
+            
+            <div className="flex gap-4">
+              <Button
+                variant="destructive"
+                size="icon"
+                className="h-12 w-12 rounded-full"
+                onClick={handleEndCall}
+              >
+                <PhoneOff className="h-6 w-6" />
+              </Button>
+            </div>
+
+            {isDisconnected && (
+              <div className="text-destructive text-sm text-center">
+                Connection lost. Call will end automatically.
+              </div>
+            )}
+          </>
+        )}
       </div>
-
-      <div className="text-center space-y-1">
-        <h3 className="text-lg font-semibold text-[#e9edef]">
-          {incomingPeer.username}
-        </h3>
-        <p className="text-sm text-[#8696a0] animate-pulse">
-          Incoming call...
-        </p>
-      </div>
-
-      <div className="flex gap-4">
-        <Button
-          variant="destructive"
-          size="icon"
-          className="h-12 w-12 rounded-full bg-red-600 hover:bg-red-700"
-          onClick={handleRejectCall}
-        >
-          <PhoneOff className="h-6 w-6" />
-        </Button>
-        <Button
-          variant="default"
-          size="icon"
-          className="h-12 w-12 rounded-full bg-[#00a884] hover:bg-[#00a884]/90"
-          onClick={handleAcceptCall}
-        >
-          <Phone className="h-6 w-6" />
-        </Button>
-      </div>
-    </div>
-  );
-
-  const activeCallContent = activePeer && (
-    <div className="flex flex-col items-center space-y-4 p-4">
-      <Ringtone 
-        play={currentCallStatus === 'ringing'} 
-        onEnd={handleCallTimeout}
-      />
-      <div className="w-24 h-24 rounded-full bg-[#00a884]/10 flex items-center justify-center">
-        <span className="text-4xl text-[#00a884]">
-          {activePeer.username.slice(0, 2).toUpperCase()}
-        </span>
-      </div>
-
-      <div className="text-center space-y-1">
-        <h3 className="text-lg font-semibold text-[#e9edef]">
-          {activePeer.username}
-        </h3>
-        <p className="text-sm text-[#8696a0]">
-          {currentCallStatus === 'ringing' ? 'Calling...' : 'Connected'}
-        </p>
-      </div>
-
-      {currentCallStatus !== 'ringing' && (
-        <div className="space-y-2 w-full">
-          <div className="flex items-center justify-between px-4">
-            <span className="text-sm text-[#8696a0]">Your audio</span>
-            <AudioVisualizer 
-              stream={localStream} 
-              className="bg-[#111b21] rounded"
-            />
-          </div>
-          
-          <div className="flex items-center justify-between px-4">
-            <span className="text-sm text-[#8696a0]">{activePeer.username}'s audio</span>
-            <AudioVisualizer 
-              stream={remoteStream}
-              className="bg-[#111b21] rounded"
-            />
-          </div>
-        </div>
-      )}
-
-      <audio ref={localAudioRef} autoPlay muted className="hidden" />
-      <audio ref={remoteAudioRef} autoPlay className="hidden" />
-      
-      <div className="flex gap-4">
-        <Button
-          variant="destructive"
-          size="icon"
-          className="h-12 w-12 rounded-full bg-red-600 hover:bg-red-700"
-          onClick={handleEndCall}
-        >
-          <PhoneOff className="h-6 w-6" />
-        </Button>
-      </div>
-
-      {isDisconnected && (
-        <div className="text-red-400 text-sm">
-          Connection lost. Call will end automatically.
-        </div>
-      )}
-    </div>
+    </ScrollArea>
   );
 
   if (isDesktop) {
@@ -242,8 +249,8 @@ export function CallDialog() {
         if (activeCall) handleEndCall();
         if (incomingCall) handleRejectCall();
       }}>
-        <DialogContent className="sm:max-w-md bg-[#202c33] text-[#e9edef] border-[#2a373f]">
-          {incomingCall ? incomingCallContent : activeCallContent}
+        <DialogContent className="sm:max-w-md">
+          {dialogContent}
         </DialogContent>
       </Dialog>
     );
@@ -254,8 +261,8 @@ export function CallDialog() {
       if (activeCall) handleEndCall();
       if (incomingCall) handleRejectCall();
     }}>
-      <DrawerContent className="bg-[#202c33] text-[#e9edef] border-t-[#2a373f]">
-        {incomingCall ? incomingCallContent : activeCallContent}
+      <DrawerContent>
+        {dialogContent}
       </DrawerContent>
     </Drawer>
   );

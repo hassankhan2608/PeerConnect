@@ -15,6 +15,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { ConnectionInfo, useChatStore } from "@/lib/store";
+import { Card } from "./ui/card";
 
 interface ChatHeaderProps {
   peer: ConnectionInfo;
@@ -43,7 +44,6 @@ export function ChatHeader({ peer, isTyping, isDisconnected, onBack }: ChatHeade
     try {
       if (!peerInstance) return;
 
-      // Request microphone access with explicit constraints
       const stream = await navigator.mediaDevices.getUserMedia({
         audio: {
           echoCancellation: true,
@@ -56,13 +56,13 @@ export function ChatHeader({ peer, isTyping, isDisconnected, onBack }: ChatHeade
       const call = peerInstance.call(peer.connection.peer, stream);
       setMediaConnection(call);
       
+      setActiveCall(peer.connection.peer);
       peer.connection.send({ type: "CALL_REQUEST" });
       setCallStatus(peer.connection.peer, 'ringing');
 
       call.on('stream', (remoteStream) => {
         setRemoteStream(remoteStream);
         setCallStatus(peer.connection.peer, 'ongoing');
-        setActiveCall(peer.connection.peer);
       });
 
       call.on('close', () => {
@@ -75,7 +75,6 @@ export function ChatHeader({ peer, isTyping, isDisconnected, onBack }: ChatHeade
         peer.connection.send({ type: "CALL_END" });
       });
 
-      // Set a timeout to end the call if not answered
       setTimeout(() => {
         if (callStatus.get(peer.connection.peer) === 'ringing') {
           call.close();
@@ -83,6 +82,7 @@ export function ChatHeader({ peer, isTyping, isDisconnected, onBack }: ChatHeade
           setLocalStream(null);
           setMediaConnection(null);
           setCallStatus(peer.connection.peer, 'ended');
+          setActiveCall(null);
         }
       }, 30000);
 
@@ -100,44 +100,48 @@ export function ChatHeader({ peer, isTyping, isDisconnected, onBack }: ChatHeade
   };
 
   return (
-    <div className="border-b border-[#2a373f] bg-[#202c33] z-10">
-      <div className="flex items-center h-16 px-4">
+    <Card className="mx-4 mt-4 mb-2">
+      <div className="flex items-center h-16 px-2 sm:px-4">
         <Button 
           variant="ghost" 
           size="icon"
-          className="md:hidden mr-2 text-[#aebac1] hover:text-[#e9edef] hover:bg-[#384147]"
+          className="md:hidden mr-1 sm:mr-2 text-muted-foreground hover:text-foreground"
           onClick={onBack}
         >
           <ArrowLeft className="h-5 w-5" />
         </Button>
         
-        <Avatar className="h-10 w-10 cursor-pointer">
+        <Avatar className="h-8 w-8 sm:h-10 sm:w-10">
           <AvatarFallback className={cn(
-            isDisconnected ? "bg-[#202c33] text-[#8696a0]" : "bg-[#00a884]/10 text-[#00a884]"
+            isDisconnected ? "bg-muted text-muted-foreground" : "bg-primary/10 text-primary"
           )}>
             {peer.username.slice(0, 2).toUpperCase()}
           </AvatarFallback>
         </Avatar>
         
-        <div className="ml-3 flex-1 cursor-pointer">
+        <div className="ml-2 sm:ml-3 flex-1 min-w-0">
           <div className="flex items-center gap-2">
-            <h3 className="font-semibold text-[#e9edef]">
+            <h3 className="font-medium truncate">
               {peer.username}
             </h3>
             {isDisconnected && (
-              <span className="text-xs text-[#8696a0]">(Offline)</span>
+              <span className="text-xs text-muted-foreground whitespace-nowrap">(Offline)</span>
             )}
           </div>
           {isTyping && (
-            <p className="text-sm text-[#00a884]">typing...</p>
+            <p className="text-sm text-primary">typing...</p>
           )}
         </div>
         
-        <div className="flex items-center gap-2 text-[#aebac1]">
+        <div className="flex items-center gap-1 sm:gap-2">
           <Tooltip>
             <TooltipTrigger asChild>
-              <Button variant="ghost" size="icon" className="hover:bg-[#384147]">
-                <Search className="h-5 w-5" />
+              <Button 
+                variant="ghost" 
+                size="icon"
+                className="h-8 w-8 sm:h-10 sm:w-10 text-muted-foreground hover:text-foreground"
+              >
+                <Search className="h-4 w-4 sm:h-5 sm:w-5" />
               </Button>
             </TooltipTrigger>
             <TooltipContent>Search in chat</TooltipContent>
@@ -145,8 +149,12 @@ export function ChatHeader({ peer, isTyping, isDisconnected, onBack }: ChatHeade
           
           <Tooltip>
             <TooltipTrigger asChild>
-              <Button variant="ghost" size="icon" className="hover:bg-[#384147]">
-                <Video className="h-5 w-5" />
+              <Button 
+                variant="ghost" 
+                size="icon"
+                className="h-8 w-8 sm:h-10 sm:w-10 text-muted-foreground hover:text-foreground"
+              >
+                <Video className="h-4 w-4 sm:h-5 sm:w-5" />
               </Button>
             </TooltipTrigger>
             <TooltipContent>Video call</TooltipContent>
@@ -156,15 +164,15 @@ export function ChatHeader({ peer, isTyping, isDisconnected, onBack }: ChatHeade
             <TooltipTrigger asChild>
               <Button 
                 variant="ghost" 
-                size="icon" 
-                className="hover:bg-[#384147]"
+                size="icon"
+                className="h-8 w-8 sm:h-10 sm:w-10 text-muted-foreground hover:text-foreground"
                 onClick={isInCall ? handleEndCall : handleCall}
                 disabled={isDisconnected || currentCallStatus === 'ringing'}
               >
                 {isInCall ? (
-                  <PhoneOff className="h-5 w-5 text-red-500" />
+                  <PhoneOff className="h-4 w-4 sm:h-5 sm:w-5 text-destructive" />
                 ) : (
-                  <Phone className="h-5 w-5" />
+                  <Phone className="h-4 w-4 sm:h-5 sm:w-5" />
                 )}
               </Button>
             </TooltipTrigger>
@@ -175,14 +183,18 @@ export function ChatHeader({ peer, isTyping, isDisconnected, onBack }: ChatHeade
           
           <Tooltip>
             <TooltipTrigger asChild>
-              <Button variant="ghost" size="icon" className="hover:bg-[#384147]">
-                <MoreVertical className="h-5 w-5" />
+              <Button 
+                variant="ghost" 
+                size="icon"
+                className="h-8 w-8 sm:h-10 sm:w-10 text-muted-foreground hover:text-foreground"
+              >
+                <MoreVertical className="h-4 w-4 sm:h-5 sm:w-5" />
               </Button>
             </TooltipTrigger>
             <TooltipContent>More options</TooltipContent>
           </Tooltip>
         </div>
       </div>
-    </div>
+    </Card>
   );
 }
