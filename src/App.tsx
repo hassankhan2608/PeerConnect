@@ -5,6 +5,7 @@ import { useChatStore } from "./lib/store";
 import { Sidebar } from "./components/Sidebar";
 import { Chat } from "./components/Chat";
 import { CallDialog } from "./components/CallDialog";
+import { VideoCallDialog } from "./components/VideoCallDialog";
 import { Toaster } from "@/components/ui/toaster";
 import { cn } from "@/lib/utils";
 import { ThemeProvider } from "@/components/theme-provider";
@@ -22,13 +23,12 @@ const mysteriousAdjectives = [
   "Infinity", "Dream", "Echo", "Cyber", "Neo", "Prime", "Ultra", "Meta"
 ];
 
-// Config for username generation with max length
 const nameConfig: Config = {
   dictionaries: [mysteriousAdjectives, heroes],
   separator: "",
   style: "capital",
   length: 2,
-  maxLength: 16 // Slightly longer to accommodate cool names
+  maxLength: 16
 };
 
 function App() {
@@ -46,7 +46,9 @@ function App() {
     incrementUnread,
     setCallStatus,
     setActiveCall,
+    setActiveVideoCall,
     setIncomingCall,
+    setIncomingVideoCall,
     setMediaConnection,
     setLocalStream,
     setRemoteStream,
@@ -125,7 +127,13 @@ function App() {
     });
 
     peer.on("call", (call) => {
-      setIncomingCall({ peerId: call.peer, call });
+      const isVideoCall = call.metadata?.type === 'video';
+      
+      if (isVideoCall) {
+        setIncomingVideoCall({ peerId: call.peer, call });
+      } else {
+        setIncomingCall({ peerId: call.peer, call });
+      }
       setCallStatus(call.peer, 'ringing');
     });
 
@@ -154,6 +162,15 @@ function App() {
       } else if (data.type === "CALL_END") {
         setCallStatus(conn.peer, 'ended');
         setActiveCall(null);
+        const mediaConn = useChatStore.getState().mediaConnection;
+        if (mediaConn) {
+          mediaConn.close();
+        }
+      } else if (data.type === "VIDEO_CALL_REQUEST") {
+        setCallStatus(conn.peer, 'ringing');
+      } else if (data.type === "VIDEO_CALL_END") {
+        setCallStatus(conn.peer, 'ended');
+        setActiveVideoCall(null);
         const mediaConn = useChatStore.getState().mediaConnection;
         if (mediaConn) {
           mediaConn.close();
@@ -188,6 +205,7 @@ function App() {
           <Chat />
         </div>
         <CallDialog />
+        <VideoCallDialog />
         <Toaster />
       </div>
     </ThemeProvider>

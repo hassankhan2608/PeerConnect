@@ -7,7 +7,8 @@ import {
   Video, 
   Search, 
   ArrowLeft,
-  PhoneOff
+  PhoneOff,
+  VideoOff
 } from "lucide-react";
 import {
   Tooltip,
@@ -29,16 +30,76 @@ export function ChatHeader({ peer, isTyping, isDisconnected, onBack }: ChatHeade
     peer: peerInstance,
     setCallStatus,
     setActiveCall,
+    setActiveVideoCall,
     setMediaConnection,
     setLocalStream,
     setRemoteStream,
     activeCall,
+    activeVideoCall,
     callStatus,
     mediaConnection
   } = useChatStore();
 
   const isInCall = activeCall === peer.connection.peer;
+  const isInVideoCall = activeVideoCall === peer.connection.peer;
   const currentCallStatus = callStatus.get(peer.connection.peer);
+
+  const handleVideoCall = async () => {
+    try {
+      if (!peerInstance) return;
+
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: {
+          width: { ideal: 1280 },
+          height: { ideal: 720 }
+        },
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true
+        }
+      });
+
+      setLocalStream(stream);
+      const call = peerInstance.call(peer.connection.peer, stream, {
+        metadata: { type: 'video' }
+      });
+      setMediaConnection(call);
+      
+      setActiveVideoCall(peer.connection.peer);
+      peer.connection.send({ type: "VIDEO_CALL_REQUEST" });
+      setCallStatus(peer.connection.peer, 'ringing');
+
+      call.on('stream', (remoteStream) => {
+        setRemoteStream(remoteStream);
+        setCallStatus(peer.connection.peer, 'ongoing');
+      });
+
+      call.on('close', () => {
+        stream.getTracks().forEach(track => track.stop());
+        setLocalStream(null);
+        setRemoteStream(null);
+        setMediaConnection(null);
+        setCallStatus(peer.connection.peer, 'ended');
+        setActiveVideoCall(null);
+        peer.connection.send({ type: "VIDEO_CALL_END" });
+      });
+
+      setTimeout(() => {
+        if (callStatus.get(peer.connection.peer) === 'ringing') {
+          call.close();
+          stream.getTracks().forEach(track => track.stop());
+          setLocalStream(null);
+          setMediaConnection(null);
+          setCallStatus(peer.connection.peer, 'ended');
+          setActiveVideoCall(null);
+        }
+      }, 30000);
+
+    } catch (error) {
+      console.error('Camera/Microphone access error:', error);
+    }
+  };
 
   const handleCall = async () => {
     try {
@@ -94,9 +155,10 @@ export function ChatHeader({ peer, isTyping, isDisconnected, onBack }: ChatHeade
   const handleEndCall = () => {
     if (!peerInstance || !mediaConnection) return;
     mediaConnection.close();
-    peer.connection.send({ type: "CALL_END" });
+    peer.connection.send({ type: isInVideoCall ? "VIDEO_CALL_END" : "CALL_END" });
     setCallStatus(peer.connection.peer, 'ended');
     setActiveCall(null);
+    setActiveVideoCall(null);
   };
 
   return (
@@ -153,11 +215,19 @@ export function ChatHeader({ peer, isTyping, isDisconnected, onBack }: ChatHeade
                 variant="ghost" 
                 size="icon"
                 className="h-8 w-8 sm:h-10 sm:w-10 text-muted-foreground hover:text-foreground"
+                onClick={isInVideoCall ? handleEndCall : handleVideoCall}
+                disabled={isDisconnected || currentCallStatus === 'ringing' || isInCall}
               >
-                <Video className="h-4 w-4 sm:h-5 sm:w-5" />
+                {isInVideoCall ? (
+                  <VideoOff className="h-4 w-4 sm:h-5 sm:w-5 text-destructive" />
+                ) : (
+                  <Video className="h-4 w-4 sm:h-5 sm:w-5" />
+                )}
               </Button>
             </TooltipTrigger>
-            <TooltipContent>Video call</TooltipContent>
+            <TooltipContent>
+              {isInVideoCall ? 'End video call' : 'Video call'}
+            </TooltipContent>
           </Tooltip>
           
           <Tooltip>
@@ -167,7 +237,7 @@ export function ChatHeader({ peer, isTyping, isDisconnected, onBack }: ChatHeade
                 size="icon"
                 className="h-8 w-8 sm:h-10 sm:w-10 text-muted-foreground hover:text-foreground"
                 onClick={isInCall ? handleEndCall : handleCall}
-                disabled={isDisconnected || currentCallStatus === 'ringing'}
+                disabled={isDisconnected || currentCallStatus === 'ringing' || isInVideoCall}
               >
                 {isInCall ? (
                   <PhoneOff className="h-4 w-4 sm:h-5 sm:w-5 text-destructive" />
